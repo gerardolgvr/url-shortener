@@ -1,30 +1,31 @@
 package dev.gerardo.shortener.controllers;
 
+import dev.gerardo.shortener.dto.AliasResponse;
+import dev.gerardo.shortener.dto.UrlRequest;
 import dev.gerardo.shortener.model.Url;
 import dev.gerardo.shortener.service.UrlService;
 import dev.gerardo.shortener.utils.Shortener;
 import dev.gerardo.shortener.utils.ShortenerFactory;
+import dev.gerardo.shortener.utils.UrlUtils;
 import org.springframework.beans.factory.annotation.Autowired;
 import org.springframework.http.HttpStatus;
 import org.springframework.http.ResponseEntity;
 import org.springframework.web.bind.annotation.*;
 
+import javax.validation.Valid;
 import java.util.Map;
 import java.util.Set;
 
 @RestController
 public class ShortenerController {
 
+    @Autowired
     private UrlService urlService;
 
-    @Autowired
-    public ShortenerController(UrlService urlService) {
-        this.urlService = urlService;
-    }
-
     @GetMapping("/urls")
-    public ResponseEntity<Map<String, String>> getUrl(){
-        return new ResponseEntity<>(this.urlService.findAll(), HttpStatus.OK);
+    @ResponseBody
+    public Map<String, String> getUrls(){
+        return this.urlService.findAll();
     }
 
     @GetMapping("/{shortenedUrl}")
@@ -49,27 +50,29 @@ public class ShortenerController {
     }
 
     @PostMapping("/urls")
-    public ResponseEntity<String> shortUrl(@RequestBody Url url){
+    public ResponseEntity<?> shortUrl(@Valid @RequestBody UrlRequest urlRequest){
         Map<String, String> urls = urlService.findAll();
 
-        if(url.getUrl().matches("^(http://|https://)?(www.)?([a-zA-Z0-9]+.){2}[a-z]+(\\/[a-zA-Z0-9#_!@.,=:-]+\\/?)*$")){
-            if(urls.containsKey(url.getUrl())) {
-                return new ResponseEntity<>(urls.get(url.getUrl()), HttpStatus.FOUND);
+        if(UrlUtils.isValidWebsite(urlRequest.getUrl())){
+            if(urls.containsKey(urlRequest.getUrl())) {
+                return new ResponseEntity<>(new AliasResponse(urls.get(urlRequest.getUrl())), HttpStatus.CREATED);
             } else {
                 boolean isNotValidAlias = true;
                 String alias = "";
-                Shortener shortener = ShortenerFactory.getShortener(url.getUrl());
+                Shortener shortener = ShortenerFactory.getShortener(urlRequest.getUrl());
 
                 while(isNotValidAlias) {
-                    alias = shortener.processUrl(url.getUrl());
+                    alias = shortener.processUrl(urlRequest.getUrl());
                     boolean isAliasAvailable = !urls.containsValue(alias);
 
                     if(isAliasAvailable)
                         isNotValidAlias = false;
                 }
 
-                urlService.save(url, alias);
-                return new ResponseEntity<>(alias, HttpStatus.CREATED);
+                Url url = new Url(urlRequest.getUrl(), alias);
+
+                urlService.save(url);
+                return new ResponseEntity<>(new AliasResponse(alias), HttpStatus.CREATED);
             }
 
         } else {

@@ -1,7 +1,5 @@
 package dev.gerardo.shortener.utils;
 
-import java.util.Random;
-
 public class DefaultShortener implements Shortener {
 
     @Override

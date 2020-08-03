@@ -1,5 +1,6 @@
 package dev.gerardo.shortener.service;
 
+import dev.gerardo.shortener.dto.UrlRequest;
 import dev.gerardo.shortener.model.Url;
 import org.springframework.stereotype.Service;
 
@@ -14,9 +15,9 @@ public class UrlService {
         urls = new Hashtable<>();
     }
 
-    public String save(Url url, String alias) {
-        urls.put(url.getUrl(), alias);
-        return alias;
+    public Url save(Url url) {
+        urls.put(url.getUrl(), url.getAlias());
+        return url;
     }
 
     public Map<String, String> findAll() {
